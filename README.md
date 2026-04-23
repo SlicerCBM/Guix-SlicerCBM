@@ -10,8 +10,9 @@ Computational Biophysics for Medicine in 3D Slicer.
 
 ## Installing
 
-Add both channels to `~/.config/guix/channels.scm` — `systole` provides Slicer,
-this channel provides the extension:
+Add the channels to `~/.config/guix/channels.scm` — `systole` provides Slicer,
+this channel provides the extension, and `mvox` / `explicitsim` provide native
+tools that some CBM modules call out to at runtime:
 
 ```scheme
 (cons* (channel
@@ -21,6 +22,14 @@ this channel provides the extension:
        (channel
          (name 'slicer-cbm)
          (url "https://github.com/SlicerCBM/Guix-SlicerCBM.git")
+         (branch "main"))
+       (channel
+         (name 'mvox)
+         (url "https://github.com/benzwick/guix-mvox")
+         (branch "main"))
+       (channel
+         (name 'explicitsim)
+         (url "https://github.com/benzwick/guix-explicitsim")
          (branch "main"))
        %default-channels)
 ```
@@ -63,6 +72,10 @@ guix lint -L guix-systole/systole -L . slicer-cbm
 - [`guix-mvox`](https://github.com/benzwick/guix-mvox) — MFEM and MVox
   mesh voxeliser. Required at runtime for SlicerCBM modules that call
   out to MVox (e.g. `MVoxMeshGenerator`).
+- [`guix-explicitsim`](https://github.com/benzwick/guix-explicitsim) —
+  ExplicitSim explicit PDE solver (GPL-3-or-later).  Required at runtime
+  for CBM modules that launch explicit dynamics simulations (e.g.
+  `MTLEDSimulator`, `TumorResectionAndBRainRemodelling`).
 
 ## License
 
