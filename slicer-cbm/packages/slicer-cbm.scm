@@ -36,14 +36,39 @@
        ;; Slicer_USE_PYTHONQT=ON — all set by the slicer-5.10 package itself).
        ;; Upstream SlicerCBM's .ruff.toml also targets Python 3.12, so 5.10
        ;; is the matching canonical Slicer for this extension.
+       ;;
+       ;; #:validate-runpath? #f — Slicer modules use $ORIGIN-relative RPATHs
+       ;;   into the Slicer store prefix that Guix's ELF validator rejects.
+       ;; replace 'configure — avoids cmake-build-system passing '-C <cachefile>'
+       ;;   as a single token, which leaks into UseSlicerExecutionModel.cmake's
+       ;;   _include() macro ("wrong number of arguments").
+       ;; -DSlicerExecutionModel_DEFAULT_CLI_INSTALL_RUNTIME_DESTINATION —
+       ;;   empty in the installed SlicerConfig.cmake on Linux; four CBM CLI
+       ;;   modules call install(FILES … DESTINATION ${…}), failing without it.
        (list
         #:tests? #f
+        #:validate-runpath? #f
+        #:out-of-source? #t
         #:configure-flags
-        #~(list "-DCMAKE_BUILD_TYPE=Release"
+        #~(list "-DCMAKE_BUILD_TYPE:STRING=Release"
                 "-DBUILD_TESTING:BOOL=OFF"
+                "-DSlicerExecutionModel_DEFAULT_CLI_INSTALL_RUNTIME_DESTINATION=lib/Slicer-5.10/cli-modules"
                 (string-append "-DSlicer_DIR="
                                #$(this-package-input "slicer-5.10")
-                               "/lib/Slicer-5.10"))))
+                               "/lib/Slicer-5.10"))
+        #:phases
+        #~(modify-phases %standard-phases
+            (replace 'configure
+              (lambda* (#:key inputs outputs configure-flags #:allow-other-keys)
+                (let* ((source (getcwd))
+                       (out (assoc-ref outputs "out")))
+                  (apply invoke "cmake"
+                         "-S" source
+                         "-B" "build"
+                         (string-append "-DCMAKE_INSTALL_PREFIX=" out)
+                         configure-flags)
+                  (chdir "build")
+                  #t))))))
       ;; UseSlicer.cmake transitively needs Qt5/VTK/ITK/Python/… at configure
       ;; time, so inherit slicer-5.10's full input set (matches the in-tree
       ;; make-slicer-scripted-module-5.10 factory in guix-systole).
